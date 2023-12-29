@@ -1,0 +1,8 @@
+*.py[cod]
+*.pth
+weights
+venv
+*.onnx
+*.bin
+.vscode
+test
