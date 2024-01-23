@@ -56,10 +56,24 @@ class WeightQuantizer(FakeQuantizer):
     def __init__(self, observer):
         super(WeightQuantizer, self).__init__(observer)
         self.pass_flag = False
+
     def forward(self, x):
         if self.mode == 'calibration':
             if not self.pass_flag:
                 self.pass_flag = True
                 if isinstance(x, torch.Tensor) and x.numel() > 0:
                     self.scale, self.zero_point = self.observer(x)
+
+        if self.mode == 'quantization':
+            if self.ch_axis == -1:
+                x = torch.clamp(torch.round(x / self.scale + self.zero_point).int(), self.observer.quant_min, self.observer.quant_max)
+                x = self.scale * (x - self.zero_point)
+            else:
+                shape = torch.ones(x.dim(), dtype=torch.int64).tolist()
+                shape[self.ch_axis] = -1
+                scale = self.scale.view(shape)
+                zero_point = self.zero_point.view(shape)
+                x = torch.clamp(torch.round(x / scale + zero_point).int(), self.observer.quant_min, self.observer.quant_max)
+                x = scale * (x - zero_point)
+
         return x
